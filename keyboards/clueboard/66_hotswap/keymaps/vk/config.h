@@ -1,2 +1,3 @@
 #pragma once
 #define GRAVE_ESC_SHIFT_OVERRIDE
+#undef NO_ACTION_TAPPING
