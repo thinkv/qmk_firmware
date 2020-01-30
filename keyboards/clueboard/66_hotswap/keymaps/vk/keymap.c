@@ -12,7 +12,8 @@ enum custom_keycodes {
     S_GAME = SAFE_RANGE,
     OSX,
     WIN,
-    KC_RUNE,
+    KC_RUNE_ALCH,
+    KC_RUNE_DART,
     DYNAMIC_MACRO_RANGE
 };
 
@@ -61,20 +62,25 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   /* macro controls
   */
 [_ML] = LAYOUT(
-  _______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,KC_RUNE,        _______,
+  _______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,KC_RUNE_DART,KC_RUNE_ALCH,        _______,
   _______,_______,_______,_______,_______,  _______,_______,_______,_______,_______,_______,_______,DYN_REC_START1,DYN_MACRO_PLAY1,        LGUI(LCTL(LSFT(KC_4))),
   _______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,_______,
   _______,        _______,_______,_______,_______,_______,_______,_______,_______,_______,_______,         _______,        _______,
   _______,_______,_______,        _______,   _______,                     _______,_______,_______,_______,_______,_______,_______),
 };
 
-bool rs_click;
+bool rs_click_alch;
+bool rs_click_dart;
 uint16_t rs_timer = false;
+uint16_t rs_base;
 uint16_t rs_interval;
+uint16_t rs_dart_step;
 
 void matrix_init_user(void) {
     rs_timer = false;
-    rs_interval = 1000 + ( rand() % 100 );
+    rs_base = 1000;
+    rs_interval = rs_base + ( rand() % 500 );
+    rs_dart_step = 1;
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -104,9 +110,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
             break;
-        case KC_RUNE:
+        case KC_RUNE_ALCH:
             if (record->event.pressed) {
-                rs_click ^= 1;
+              rs_base = 1000;
+                rs_click_alch ^= 1;
+                rs_timer = timer_read();
+            }
+            return false;
+            break;
+        case KC_RUNE_DART:
+            if (record->event.pressed) {
+              rs_base = 100;
+                rs_click_dart ^= 1;
                 rs_timer = timer_read();
             }
             return false;
@@ -116,12 +131,36 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 void matrix_scan_user(void) {
-  if (rs_click) {
+  if (rs_click_alch) {
     if (timer_elapsed(rs_timer) >= rs_interval) {
       SEND_STRING(SS_TAP(X_KP_5));
       //xprintf("Interval: %u\n", rs_interval);
       rs_timer = timer_read();
-      rs_interval = 1000 + ( rand() % 500 );
+      rs_interval = rs_base + ( rand() % 500 );
+    }
+  } else if (rs_click_dart) {
+    if (timer_elapsed(rs_timer) >= rs_interval) {
+      switch(rs_dart_step) {
+        case 1:
+            SEND_STRING(SS_TAP(X_KP_5));
+            rs_dart_step = 2;
+            break;
+        case 2:
+            SEND_STRING(SS_TAP(X_KP_6));
+            rs_dart_step = 3;
+            break;
+        case 3:
+            SEND_STRING(SS_TAP(X_KP_5));
+            rs_dart_step = 4;
+            break;
+        case 4:
+            SEND_STRING(SS_TAP(X_KP_4));
+            rs_dart_step = 1;
+            break;
+      }
+      //xprintf("Interval: %u\n", rs_interval);
+      rs_timer = timer_read();
+      rs_interval = rs_base + ( rand() % 50 );
     }
   }
 }
